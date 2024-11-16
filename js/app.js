@@ -18,6 +18,38 @@ recordButton.addEventListener("click", startRecording);
 // stopButton.addEventListener("click", stopRecording);
 // pauseButton.addEventListener("click", pauseRecording);
 
+// Speech Recognition Variables
+const webkitSpeechRecognition = window.webkitSpeechRecognition;
+const recognition = new webkitSpeechRecognition();
+
+recognition.continuous = false; // Stop after one input
+recognition.interimResults = false; // Only final results
+recognition.lang = "en-US"; // Set language (use "vi-VN" for Vietnamese)
+
+// Handle transcription
+recognition.onresult = function (event) {
+	const transcript = event.results[0][0].transcript;
+	
+	fetch('http://192.168.31.239/post-message', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'text/plain',
+		},
+		body: transcript
+	})
+	.then(response => response.text())
+	.then(data => {
+		console.log('Response from ESP32 (text):', data);
+	})
+	.catch((error) => {
+		console.error('Error:', error);
+	});
+};
+
+recognition.onerror = function (event) {
+	console.error("Speech Recognition Error:", event.error);
+};
+
 function startRecording() {
 	console.log("recordButton clicked");
 
@@ -35,6 +67,8 @@ function startRecording() {
 	recordButton.disabled = true;
 	// stopButton.disabled = false;
 	// pauseButton.disabled = false
+
+	recognition.start();
 
 	/*
     	We're using the standard promise based getUserMedia() 
@@ -73,7 +107,10 @@ function startRecording() {
 		console.log("Recording started");
 
 		// Automatically stop recording after 5 seconds
-		setTimeout(stopRecording, 5000); // 5000 milliseconds = 5 seconds
+		setTimeout(() => {
+			stopRecording();
+			recognition.stop();
+		}, 5000);
 
 	}).catch(function(err) {
 	  	//enable the record button if getUserMedia() fails
